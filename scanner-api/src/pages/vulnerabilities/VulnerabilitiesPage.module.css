@@ -1,0 +1,40 @@
+.header { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; }
+.header h1 { font-size: 2.1rem; margin-top: 6px; }
+
+.countsRow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+.countCard { display: grid; gap: 8px; }
+.countLabel { font-size: 0.82rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-secondary); }
+.countVal { font-size: 2rem; color: var(--text-primary); font-weight: 700; }
+.countCritical { border-color: rgba(255,85,85,0.25) !important; }
+.countHigh     { border-color: rgba(248,163,72,0.25) !important; }
+.countMedium   { border-color: rgba(108,147,225,0.25) !important; }
+.countLow      { border-color: rgba(97,183,137,0.25) !important; }
+
+.filterPanel { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.filterGroup { display: grid; gap: 6px; }
+
+.tableLayout { display: grid; grid-template-columns: 1fr; gap: 18px; transition: grid-template-columns var(--transition); }
+.withDrawer  { grid-template-columns: 1.5fr 0.9fr; }
+
+.tablePanel { overflow-x: auto; padding: 0; }
+.tablePanel .data-table { min-width: 700px; }
+.tablePanel .data-table th:first-child,
+.tablePanel .data-table td:first-child { padding-left: 20px; }
+
+.selectedRow { background: var(--brand-muted) !important; }
+
+.drawer { display: grid; gap: 0; align-content: start; }
+.drawerHead { display: flex; justify-content: space-between; align-items: center; }
+.closeBtn { border: none; background: rgba(255,255,255,0.04); color: var(--text-secondary); width: 36px; height: 36px; border-radius: var(--radius-sm); cursor: pointer; font-size: 1.1rem; transition: background var(--transition); }
+.closeBtn:hover { background: var(--critical-bg); color: var(--critical-text); }
+
+.drawerBody { margin-top: 20px; display: grid; gap: 14px; }
+.drawerRow { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+.drawerRow span { color: var(--text-secondary); }
+.drawerBlock { padding: 16px; border-radius: var(--radius-md); background: var(--brand-muted); border: 1px solid var(--brand-border); }
+.drawerBlock h3 { margin: 0 0 8px; font-size: 0.95rem; }
+.drawerBlock p { margin: 0; color: #d4e3ff; font-size: 0.9rem; line-height: 1.65; }
+
+@media (max-width: 1100px) { .withDrawer { grid-template-columns: 1fr; } }
+@media (max-width: 860px) { .countsRow { grid-template-columns: 1fr 1fr; } .filterPanel { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 600px) { .countsRow { grid-template-columns: 1fr; } .filterPanel { grid-template-columns: 1fr; } }

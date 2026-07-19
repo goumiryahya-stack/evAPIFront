@@ -1,0 +1,53 @@
+# EvAPI — Stack locale : PostgreSQL + n8n (+ Ollama optionnel)
+# Usage : docker compose up -d
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: evapi-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: evapi
+      POSTGRES_PASSWORD: evapi_secret
+      POSTGRES_DB: evapi
+    ports:
+      - "5432:5432"
+    volumes:
+      - evapi_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U evapi -d evapi"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: evapi-n8n
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - WEBHOOK_URL=http://localhost:5678/
+      - GENERIC_TIMEZONE=Europe/Paris
+    volumes:
+      - evapi_n8n_data:/home/node/.n8n
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # Décommenter pour IA locale (ollama pull llama3)
+  # ollama:
+  #   image: ollama/ollama:latest
+  #   container_name: evapi-ollama
+  #   ports:
+  #     - "11434:11434"
+  #   volumes:
+  #     - evapi_ollama_data:/root/.ollama
+
+volumes:
+  evapi_pg_data:
+  evapi_n8n_data:
+  # evapi_ollama_data:
