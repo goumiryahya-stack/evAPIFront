@@ -1,7 +1,8 @@
 # EvAPI — État d'avancement (cahier de suivi)
 
 Document de référence pour savoir où en est le projet et par où reprendre.
-Mis à jour le 30/07/2026 (session d'architecture backend + PostgreSQL).
+Mis à jour le 30/07/2026 (architecture backend + PostgreSQL + BFLA/Mass
+Assignment + fix PDF). Backend et frontend commités et poussés.
 
 ---
 
@@ -32,7 +33,9 @@ app/
     │   ├── openapi_parser.py    # NOUVEAU — parse OpenAPI/Swagger
     │   ├── post_scan_tasks.py   # PDF + notification n8n (plus d'IA ici)
     │   └── custom_checks/
-    │       └── bola.py          # check BOLA extrait de scan_engine.py
+    │       ├── bola.py                    # API1:2023
+    │       ├── bfla_check.py              # API5:2023 — NOUVEAU
+    │       └── mass_assignment_check.py   # API3:2023 — NOUVEAU
     ├── integrations/
     │   ├── n8n_service.py
     │   └── zap_service.py       # + import_openapi_spec()
@@ -80,7 +83,9 @@ d'envoyer sur Slack).
 | Rapports (export JSON/CSV, import) | ✅ | Repository pattern (`ScanRepository`) |
 | Vulnérabilités (filtres, statut) | ✅ | Repository pattern (`VulnerabilityRepository`) |
 | Dashboard | ✅ | Agrégations via repositories |
-| PDF automatique en fin de scan | 🟡 | Génération échoue silencieusement sur certains scans (`fpdf2: Not enough horizontal space to render a single character`) — bug préexistant, pas corrigé cette session (hors périmètre demandé), scan non bloqué (juste pas de PDF) |
+| PDF automatique en fin de scan | ✅ **Corrigé** | La vraie cause n'était pas la longueur du texte : `multi_cell(w=0, ...)` laisse le curseur au bord droit de la page (`new_x=XPos.RIGHT` par défaut dans fpdf2) ; l'appel suivant calculait donc une largeur nulle et échouait instantanément, quel que soit son contenu. Fix : reset `pdf.x` à la marge gauche avant chaque `multi_cell()`. Vérifié par téléchargement réel du PDF généré (200 OK, PDF valide) |
+| **BFLA (API5:2023)** | ✅ **Nouveau** | `custom_checks/bfla_check.py` — actif seulement si `ScanCreate.auth` (token d'un rôle restreint sur l'API **cible**) est fourni. Testé en conditions réelles (log "BFLA : 0 finding(s)" sur httpbin.org) |
+| **Mass Assignment (API3:2023)** | ✅ **Nouveau** | `custom_checks/mass_assignment_check.py` — même mécanisme `auth`. Testé en conditions réelles |
 | **n8n — workflow IA + Slack prêt à l'emploi** | ✅ **Nouveau** | `n8n-workflows/evapi-scan-complete.json` (Webhook → Ollama → Set → Slack). JSON valide, schéma n8n correct, **non testé contre une instance n8n réelle** (Docker indisponible dans cet environnement) |
 | **PostgreSQL** | ✅ **Basculé et vérifié** | `.env` pointe maintenant sur PostgreSQL (voir section 5) — plus SQLite par défaut |
 | Architecture Repository | ✅ | User/Scan/Vulnerability (session précédente) |
@@ -122,48 +127,40 @@ pointera vers un conteneur séparé avec les mêmes identifiants — changer
 
 ---
 
-## 6. Bugs connus (non corrigés, hors périmètre de cette session)
+## 6. Bugs connus restants (mineurs, non bloquants)
 
-1. **PDF génération** : `fpdf2` lève parfois `Not enough horizontal space to
-   render a single character` pendant `generate_scan_pdf()`
-   (`app/services/reports/pdf_service.py`). Capturé par `post_scan_tasks.py`
-   (ne bloque pas le scan), mais `pdf_report_path` reste `None`. À
-   investiguer : probablement un texte trop long/sans espace pour
-   `multi_cell()`.
-2. `storage_service.save_upload_file()` retourne un chemin **absolu** malgré
+1. `storage_service.save_upload_file()` retourne un chemin **absolu** malgré
    le commentaire "chemin relatif pour la base de données" — cohérent avec
    l'usage actuel (`get_file_path` revalide de toute façon), mais le
    commentaire est trompeur.
+2. `GET /reports/{scan_id}` (`ScanResponse`) n'expose pas `pdf_report_path` —
+   pour vérifier la disponibilité du PDF, passer par
+   `GET /files/reports/{scan_id}/pdf` directement (404 si pas encore généré).
 
 ---
 
 ## 7. Décisions en attente (à trancher avec toi)
 
-1. **Commit des changements backend de cette session** (dépôt `evAPI`) — pas
-   encore fait : suppression IA, réorganisation des services, parser
-   OpenAPI, intégration ZAP, tests, bascule PostgreSQL. Tout est vérifié
-   fonctionnellement mais rien n'est commité côté backend.
-2. **Push** des commits frontend déjà faits (`evAPIFront` — fix
-   ProtectedRoute + suppression bouton IA) vers GitHub.
-3. **Nettoyage restant** (reporté lors d'une session précédente) : fichiers
+1. **Nettoyage restant** (reporté depuis une session précédente) : fichiers
    `.jsx` orphelins à la racine, `.venv/` racine, worktree/branche oubliés.
-4. **Historique Git de `evAPI`** : `venv/`, `.env`, `scanapi.db` retirés du
+2. **Historique Git de `evAPI`** : `venv/`, `.env`, `scanapi.db` retirés du
    suivi actuel mais toujours visibles dans les anciens commits déjà
    poussés — purge d'historique non faite (aucun vrai secret exposé).
 
+Tout le reste (backend + frontend) est commité **et poussé** sur GitHub.
+
 ## 8. Prochaines étapes candidates
 
-1. Corriger le bug PDF (`fpdf2`) — actuellement silencieux, donc facile à
-   manquer en usage normal.
-2. Tester le workflow n8n contre une vraie instance (webhook réel, Ollama
+1. Tester le workflow n8n contre une vraie instance (webhook réel, Ollama
    réel, Slack réel) — actuellement seulement validé structurellement.
-3. Tester l'import OpenAPI dans ZAP contre un vrai daemon ZAP.
-4. Étendre la couche Repository aux services d'écriture
+2. Tester l'import OpenAPI dans ZAP et les checks BFLA/Mass Assignment
+   contre une vraie API cible avec de vrais rôles/permissions — validés ici
+   uniquement contre httpbin.org (pas d'endpoints admin réels à trouver).
+3. Étendre la couche Repository aux services d'écriture
    (`scan_engine.py`, `post_scan_tasks.py`) si séparation complète voulue.
-5. Ajouter des checks BFLA (Broken Function Level Authorization) et Mass
-   Assignment dans `custom_checks/` — mentionnés comme prévus mais jamais
-   implémentés avant cette session, toujours pas fait (non demandé
-   explicitement cette fois).
+4. `ScanCreate.auth` n'est branché que sur `POST /scans` — pas sur le
+   déclenchement n8n (`/integrations/n8n/trigger-scan`), non demandé donc
+   pas fait.
 
 ---
 
