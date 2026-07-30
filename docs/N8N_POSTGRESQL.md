@@ -56,11 +56,23 @@ docker compose up -d n8n
 
 Interface : http://localhost:5678
 
-### Webhook sortant (EvAPI → n8n)
+### Webhook sortant (EvAPI → n8n) — workflow IA + Slack prêt à l'emploi
 
-1. Créer un workflow avec nœud **Webhook** (POST)
-2. Copier l’URL (ex. `http://localhost:5678/webhook/evapi-scan`)
-3. Dans `.env` : `N8N_WEBHOOK_URL=<cette URL>`
+Un workflow complet est fourni : `n8n-workflows/evapi-scan-complete.json`
+(Webhook → Ollama → Extraction réponse → Slack).
+
+1. Ouvrir n8n (http://localhost:5678) → **Import from File** → sélectionner
+   `n8n-workflows/evapi-scan-complete.json`
+2. Dans le nœud **Envoyer sur Slack**, remplacer l'URL par votre propre
+   [webhook entrant Slack](https://api.slack.com/messaging/webhooks)
+3. Activer le workflow (toggle en haut à droite)
+4. Copier l'URL du nœud **Webhook - Scan Complete** (généralement
+   `http://localhost:5678/webhook/evapi-scan-complete`)
+5. Dans `scanner-api-backend/.env` : `N8N_WEBHOOK_URL=<cette URL>`
+
+Le nœud Ollama attend `http://ollama:11434` — si Ollama tourne hors Docker,
+remplacer par `http://host.docker.internal:11434` (Windows/Mac) dans le
+nœud **Ollama - Reformuler le rapport**.
 
 Événements reçus :
 

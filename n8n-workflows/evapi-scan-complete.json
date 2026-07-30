@@ -1,0 +1,134 @@
+{
+  "name": "EvAPI - Scan Complete (IA + Slack)",
+  "nodes": [
+    {
+      "id": "1a1e6f2a-0001-4a3e-8a1a-000000000001",
+      "name": "Webhook - Scan Complete",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-400, 0],
+      "webhookId": "evapi-scan-complete",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "evapi-scan-complete",
+        "responseMode": "onReceived",
+        "options": {}
+      }
+    },
+    {
+      "id": "1a1e6f2a-0002-4a3e-8a1a-000000000002",
+      "name": "Ollama - Reformuler le rapport",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-100, 0],
+      "parameters": {
+        "method": "POST",
+        "url": "http://ollama:11434/api/generate",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  model: \"llama3\",\n  system: \"Tu es un assistant qui reformule des rapports de sécurité technique en langage simple et clair pour un utilisateur non-expert. Structure ta réponse avec : un résumé en 2 phrases, puis pour chaque vulnérabilité une explication courte du risque et une recommandation concrète.\",\n  prompt: JSON.stringify(($json.body || $json).vulnerabilities || []),\n  stream: false,\n  options: { temperature: 0.3 }\n}) }}",
+        "options": {
+          "timeout": 60000
+        }
+      }
+    },
+    {
+      "id": "1a1e6f2a-0003-4a3e-8a1a-000000000003",
+      "name": "Extraire la reponse IA",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [200, 0],
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "ai_summary",
+              "type": "string",
+              "value": "={{ $json.response }}"
+            },
+            {
+              "id": "a2",
+              "name": "scan_id",
+              "type": "string",
+              "value": "={{ ($('Webhook - Scan Complete').item.json.body || $('Webhook - Scan Complete').item.json).scan.id }}"
+            },
+            {
+              "id": "a3",
+              "name": "target_url",
+              "type": "string",
+              "value": "={{ ($('Webhook - Scan Complete').item.json.body || $('Webhook - Scan Complete').item.json).scan.target_url }}"
+            },
+            {
+              "id": "a4",
+              "name": "score",
+              "type": "string",
+              "value": "={{ ($('Webhook - Scan Complete').item.json.body || $('Webhook - Scan Complete').item.json).scan.score }}"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "1a1e6f2a-0004-4a3e-8a1a-000000000004",
+      "name": "Envoyer sur Slack",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 0],
+      "parameters": {
+        "method": "POST",
+        "url": "https://hooks.slack.com/services/REMPLACER/PAR/VOTRE_WEBHOOK",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ text: `*EvAPI - Scan terminé* (score ${$json.score}/100)\\n${$json.target_url}\\n\\n${$json.ai_summary}\\n\\nRapport : http://localhost:5173/reports/${$json.scan_id}` }) }}",
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Webhook - Scan Complete": {
+      "main": [
+        [
+          {
+            "node": "Ollama - Reformuler le rapport",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama - Reformuler le rapport": {
+      "main": [
+        [
+          {
+            "node": "Extraire la reponse IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraire la reponse IA": {
+      "main": [
+        [
+          {
+            "node": "Envoyer sur Slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "active": false
+}
