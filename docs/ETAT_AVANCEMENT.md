@@ -2,7 +2,8 @@
 
 Document de référence pour savoir où en est le projet et par où reprendre.
 Mis à jour le 30/07/2026 (architecture backend + PostgreSQL + BFLA/Mass
-Assignment + fix PDF). Backend et frontend commités et poussés.
+Assignment + fix PDF + nettoyage final). Backend et frontend commités et
+poussés — dépôt propre des deux côtés.
 
 ---
 
@@ -127,22 +128,48 @@ pointera vers un conteneur séparé avec les mêmes identifiants — changer
 
 ---
 
-## 6. Bugs connus restants (mineurs, non bloquants)
+## 6. Nettoyage final (30/07/2026)
 
-1. `storage_service.save_upload_file()` retourne un chemin **absolu** malgré
-   le commentaire "chemin relatif pour la base de données" — cohérent avec
-   l'usage actuel (`get_file_path` revalide de toute façon), mais le
-   commentaire est trompeur.
-2. `GET /reports/{scan_id}` (`ScanResponse`) n'expose pas `pdf_report_path` —
-   pour vérifier la disponibilité du PDF, passer par
-   `GET /files/reports/{scan_id}/pdf` directement (404 si pas encore généré).
+Un cahier de charge a circulé affirmant plusieurs incohérences entre l'état
+réel du dépôt et cette documentation. Vérification systématique avant
+d'agir (fichier par fichier, `ls`/`grep`, pas de suppositions) :
+
+| Point du cahier | Réalité vérifiée | Action |
+|---|---|---|
+| `app/api/routers/ai.py` à supprimer | N'existe pas (ni ce chemin fictif, ni le vrai `app/routers/ai.py`) — déjà supprimé lors d'une session précédente | ✅ Aucune action nécessaire |
+| `app/services/integrations/ai_service.py` à supprimer | N'existe nulle part dans le projet | ✅ Aucune action nécessaire |
+| `scanapi.db` obsolète | Existait encore sur disque (déjà gitignoré, jamais suivi) | ✅ Supprimé |
+| `.pytest_cache/` à supprimer | Existait sur disque (déjà gitignoré) | ✅ Supprimé |
+| `alembic/alembic.code-workspace` égaré | Existait et **était suivi par Git** | ✅ Supprimé + `.gitignore` complété (`.pytest_cache/`, `*.code-workspace`) |
+| 8 `.jsx` + `package.json` + `SAUVEGARDE.md` orphelins à la racine du frontend | Existaient toujours (reportés lors d'un nettoyage précédent, jamais sélectionnés) | ✅ Supprimés + lien mort retiré du README |
+| **`openapi_parser.py` "manquant"** | **Faux** — existe et fonctionne (testé de bout en bout) | ❌ Pas recréé (aurait écrasé du code testé) |
+| **`app/repositories/` "manquant"** | **Faux** — existe avec les 3 repositories | ❌ Pas recréé |
+| **`n8n-workflows/evapi-scan-complete.json` "manquant"** | **Faux** — existe dans `evAPIFront/` (racine), comme prévu | ❌ Pas recréé |
+| `.gitignore` backend à vérifier | Existait, il manquait juste 2 entrées | ✅ Complété |
+
+**Piège évité** : `git add -A` a failli embarquer le worktree Git oublié
+(`scanner-api-backend.worktrees/agents-create-cloud-storage-bucket-function`,
+sans rapport avec EvAPI) comme dépôt imbriqué — retiré du staging avant le
+commit.
+
+**Vérifications post-nettoyage** (toutes passées) :
+- Zéro référence résiduelle à `ai_service`/`ollama_service`/`AI_ENABLED`
+- `main.py` et `post_scan_tasks.py` ne référencent plus l'IA
+- 23/23 tests passent
+- Backend démarre, frontend build sans erreur
+
+Commits : `evAPI` `7dd8e2a`, `evAPIFront` `5cde11a` — poussés.
+
+Les deux petits fixes demandés juste avant (commentaire trompeur dans
+`storage_service.py`, `pdf_report_path` exposé dans `ScanResponse`) sont
+inclus dans le commit `evAPI` `7dd8e2a`.
 
 ---
 
 ## 7. Décisions en attente (à trancher avec toi)
 
-1. **Nettoyage restant** (reporté depuis une session précédente) : fichiers
-   `.jsx` orphelins à la racine, `.venv/` racine, worktree/branche oubliés.
+1. **`.venv/` à la racine** (doublon Python inutilisé, non suivi par Git) —
+   repéré il y a plusieurs sessions, jamais sélectionné pour suppression.
 2. **Historique Git de `evAPI`** : `venv/`, `.env`, `scanapi.db` retirés du
    suivi actuel mais toujours visibles dans les anciens commits déjà
    poussés — purge d'historique non faite (aucun vrai secret exposé).
