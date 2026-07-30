@@ -4,7 +4,7 @@ import { apiFetch } from '../../utils/api';
 import ScoreRing from '../../components/ui/ScoreRing';
 import SeverityBadge from '../../components/ui/SeverityBadge';
 import { scoreLevel } from '../../utils/severity';
-import { exportReport, downloadReportPdf, enrichReportWithAi, fetchAiStatus } from '../../utils/reports';
+import { exportReport, downloadReportPdf } from '../../utils/reports';
 import styles from './ReportDetailPage.module.css';
 
 const ReportDetailPage = () => {
@@ -14,8 +14,6 @@ const ReportDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [exporting, setExporting] = useState(null);
-  const [aiStatus, setAiStatus] = useState(null);
-  const [enriching, setEnriching] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -29,7 +27,6 @@ const ReportDetailPage = () => {
       }
     };
     if (id) load();
-    fetchAiStatus().then(setAiStatus).catch(() => setAiStatus({ available: false }));
   }, [id]);
 
   if (loading) {
@@ -99,18 +96,6 @@ const ReportDetailPage = () => {
     }
   };
 
-  const handleAiEnrich = async () => {
-    setEnriching(true);
-    try {
-      const data = await enrichReportWithAi(id);
-      setReport(data);
-    } catch (err) {
-      alert(err.message);
-    } finally {
-      setEnriching(false);
-    }
-  };
-
   return (
     <div className="page-shell">
       <header className={`card ${styles.header}`}>
@@ -133,15 +118,6 @@ const ReportDetailPage = () => {
           </button>
           <button type="button" className="btn btn-ghost" disabled={!!exporting} onClick={handlePdf}>
             {exporting === 'pdf' ? '…' : '📄 PDF'}
-          </button>
-          <button
-            type="button"
-            className="btn btn-ghost"
-            disabled={enriching || aiStatus?.available === false}
-            title={aiStatus?.available === false ? 'Ollama non disponible' : 'Générer résumé et recommandations IA'}
-            onClick={handleAiEnrich}
-          >
-            {enriching ? 'IA…' : '🤖 IA'}
           </button>
           <button type="button" className="btn btn-primary" onClick={() => navigate('/scans/new')}>↺ Nouveau scan</button>
         </div>

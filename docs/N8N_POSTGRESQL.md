@@ -35,11 +35,14 @@ Redémarrer le backend.
 
 ## 3. IA (Ollama)
 
+Le backend EvAPI n'appelle **jamais** Ollama directement — l'IA intervient
+uniquement côté n8n, via le workflow décrit section 4 (webhook → Ollama →
+Slack/Jira), déclenché automatiquement à la fin de chaque scan
+(`scan.completed`).
+
 1. Installer [Ollama](https://ollama.com/) ou décommenter `ollama` dans `docker-compose.yml`
 2. `ollama pull llama3`
-3. Vérifier : `GET /api/v1/ai/status`
-
-Enrichissement manuel : `POST /api/v1/ai/reports/{scan_id}/enrich` (bouton **IA** dans l’UI)
+3. Importer `n8n-workflows/evapi-scan-complete.json` dans n8n (voir section 4)
 
 ---
 

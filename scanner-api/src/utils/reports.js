@@ -58,30 +58,6 @@ export const downloadReportPdf = async (scanId) => {
   await handleDownloadResponse(response, `evapi-rapport-${scanId.slice(0, 8)}.pdf`);
 };
 
-/** Enrichit un rapport avec Ollama (résumé + recommandations IA). */
-export const enrichReportWithAi = async (scanId) => {
-  const token = localStorage.getItem('access_token');
-  const response = await fetch(`${API_BASE_URL}/ai/reports/${scanId}/enrich`, {
-    method: 'POST',
-    headers: {
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-  });
-  const data = await response.json().catch(() => null);
-  if (!response.ok) {
-    const detail = data?.detail;
-    throw new Error(typeof detail === 'string' ? detail : 'Enrichissement IA échoué');
-  }
-  return data;
-};
-
-/** Statut Ollama. */
-export const fetchAiStatus = async () => {
-  const response = await fetch(`${API_BASE_URL}/ai/status`, { headers: authHeaders() });
-  if (!response.ok) throw new Error('Impossible de joindre le service IA');
-  return response.json();
-};
-
 /** Importe un rapport depuis un fichier JSON EvAPI. */
 export const importReport = async (file) => {
   const form = new FormData();

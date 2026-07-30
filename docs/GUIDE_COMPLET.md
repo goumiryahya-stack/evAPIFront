@@ -283,7 +283,7 @@ git commit -m "EvAPI: plateforme audit API OWASP complète"
 ## N. Évolutions possibles
 
 - Génération **PDF** des rapports
-- **Ollama** pour recommandations IA (`ai_service.py`)
+- **Ollama** pour recommandations IA — intégré côté n8n uniquement (voir `docs/N8N_POSTGRESQL.md`), jamais appelé depuis le backend
 - Parser **OpenAPI** importé pour scanner tous les endpoints
 - **PostgreSQL** + Alembic en production
 - Respecter `selected_checks` dans le moteur (checks cochés dans l’UI)
