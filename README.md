@@ -66,4 +66,4 @@ Voir `scanner-api-backend/EVAPI.txt` — copier vers `.env` et modifier `SECRET_
 
 - [Guide A → Z](docs/GUIDE_COMPLET.md) — architecture, API, OWASP, import/export
 - [PostgreSQL, PDF, IA, n8n](docs/N8N_POSTGRESQL.md) — Docker, Ollama, webhooks
-- [Sauvegarde](SAUVEGARDE.md) — Git, OneDrive, ZIP
+- [État d'avancement](docs/ETAT_AVANCEMENT.md) — suivi du projet
