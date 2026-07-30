@@ -7,7 +7,19 @@ import AppLayout from '../components/layout/AppLayout';
  * ProtectedRoute — Redirige vers /auth si non authentifié
  */
 const ProtectedRoute = () => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
+
+  // Le token est vérifié de façon async au montage (AuthContext.initAuth) :
+  // ne pas rediriger tant que ce check n'est pas terminé, sinon un rechargement
+  // de page (ou un lien direct) déconnecte un utilisateur pourtant valide.
+  if (isLoading) {
+    return (
+      <div className="page-shell">
+        <p style={{ color: 'var(--text-secondary)' }}>Chargement…</p>
+      </div>
+    );
+  }
+
   if (!isAuthenticated) return <Navigate to="/auth" replace />;
   return <AppLayout />;
 };
