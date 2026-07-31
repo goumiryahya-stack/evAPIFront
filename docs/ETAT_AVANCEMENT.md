@@ -188,6 +188,36 @@ comme dépôt imbriqué — retiré du staging avant le commit.
 Vérifications finales : zéro référence résiduelle à `ai_service`/`ollama`,
 23/23 tests passent, backend démarre, frontend build sans erreur.
 
+### H. Audit sécurité JWT / bcrypt (31/07/2026)
+
+Un document de suivi externe (hors de ce dépôt) affirmait un point ouvert
+préoccupant : *"JWT algorithm pinning est designé mais pas encore
+implémenté"*. Vérification directe du code plutôt que confiance aveugle
+dans l'affirmation :
+
+**Point clos — JWT algorithm pinning : déjà implémenté et vérifié.**
+`app/core/security.py:55-58` : `jwt.decode(token, settings.SECRET_KEY,
+algorithms=[settings.ALGORITHM])` — liste fermée à un seul algorithme
+(`HS256`, confirmé dans `.env` et `app/core/config.py:37`), aucune
+ouverture vers `"none"` ni plusieurs algorithmes mélangés. Expiration :
+60 minutes (`ACCESS_TOKEN_EXPIRE_MINUTES`). Le point du document externe
+est **obsolète** — il ne reflète pas l'état réel du code.
+
+**Nouveau point mineur trouvé pendant l'audit (résiduel, priorité basse) :
+comparaison non temps-constant sur un chemin d'authentification legacy.**
+`app/routers/auth.py:109-116` : si `hashed_password` ne commence pas par
+`$2` (format bcrypt), le mot de passe est comparé avec `==` Python — non
+temps-constant — au lieu de passer par `bcrypt.checkpw()` (temps constant,
+chemin principal, `app/core/security.py:26-34`). Ce chemin sert
+uniquement à migrer d'anciens comptes en clair vers bcrypt à la première
+connexion réussie ; il s'auto-désactive par compte dès cette migration.
+Vérifié directement en base réelle (PostgreSQL) : les 2 comptes existants
+(`demo@evapi.com` et celui créé pendant cette session) ont tous deux un
+hash `$2b$` — aucun n'emprunte ce chemin aujourd'hui. Risque théorique,
+non exploitable en l'état actuel des données. Action recommandée, non
+urgente : supprimer ce chemin ou le sécuriser avec `hmac.compare_digest`
+(voir section 5).
+
 ---
 
 ## 3. Architecture actuelle (snapshot)
@@ -265,6 +295,9 @@ apiScanner/                    (dépôt evAPIFront, racine)
    déclenchement n8n (`/integrations/n8n/trigger-scan`).
 8. Reconsidérer l'exposition du chemin absolu dans `pdf_report_path`
    (→ `pdf_available: bool` si besoin de ne pas révéler la structure serveur).
+9. Nettoyer le chemin d'authentification legacy (`app/routers/auth.py:109-116`,
+   comparaison `==` non temps-constant pour les comptes non-bcrypt) — non
+   urgent, aucun compte réel concerné actuellement (voir section 2.H).
 
 Tout le reste (backend + frontend) est commité **et poussé** sur GitHub.
 
